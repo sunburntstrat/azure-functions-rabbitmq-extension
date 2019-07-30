@@ -10,6 +10,7 @@
     <AssemblyOriginatorKeyFile>PublicKey.snk</AssemblyOriginatorKeyFile>
     <DelaySign>true</DelaySign>
     <Version>3.0.6$(VersionSuffix)</Version>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
    
    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU' or '$(Configuration)|$(Platform)'=='Debug|Any CPU'">
