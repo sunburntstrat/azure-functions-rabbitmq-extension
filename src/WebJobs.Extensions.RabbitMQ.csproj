@@ -9,6 +9,7 @@
     <SignAssembly>false</SignAssembly>
     <AssemblyOriginatorKeyFile>PublicKey.snk</AssemblyOriginatorKeyFile>
     <DelaySign>true</DelaySign>
+     <Version>3.0.6$(VersionSuffix)</Version>
   </PropertyGroup>
 
   <ItemGroup>
