@@ -1,0 +1,83 @@
+name: $(Build.DefinitionName)-1.1$(rev:.r) #Note rev gets reset once the default retention period expires!
+
+variables:
+  - group: integration-common
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - "*"
+
+pool:
+  name: Azure Pipelines
+  vmImage: windows-2019
+
+stages:
+- stage: Build
+  displayName: 'Build and package assemblies'
+  jobs: 
+  - job:
+    workspace:
+      clean: all
+    steps:
+      - task: DotNetCoreCLI@2
+        displayName: 'dotnet restore'
+        enabled: true
+        inputs:
+          command: restore
+          projects: |
+                    src/*.csproj
+                    test/*.csproj
+          verbosityRestore: 'Normal'
+          vstsFeed: '$(nuget_feed)'
+
+      - task: DotNetCoreCLI@2
+        displayName: "Build Packages"
+        enabled: false
+        inputs:
+          command: build
+          projects: | 
+                    src/*.csproj
+                    test/*.csproj
+          arguments: '--configuration $(build_configuration)'
+
+      - task: DotNetCoreCLI@2
+        displayName: 'dotnet test'
+        inputs:
+          command: test
+          projects: '**/*.Tests.csproj'
+          arguments: '--configuration $(build_configuration) --collect "Code coverage" /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:CoverletOutput=$(Build.SourcesDirectroy)\TestResults\Coverage\'
+
+      - task: DotNetCoreCLI@2
+        displayName: 'dotnet pack'
+        inputs:
+          command: pack
+          packDirectory: '$(Build.ArtifactStagingDirectory)/packages'
+          configuration: $(build_configuration)
+          nobuild: false
+          versioningScheme: byBuildNumber
+          verbosityPack: Normal
+
+      - publish: '$(Build.ArtifactStagingDirectory)/packages'
+        artifact: 'packages'
+
+- stage: 'PublishNuGetPackages'
+  displayName: 'Push to NuGet feed'
+  dependsOn: 'Build'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/dev'))
+  jobs:
+  - job: Push
+    displayName:
+    steps:
+    - checkout: none
+    - download: current
+      artifact: 'packages'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'dotnet push'
+      inputs:
+        command: push
+        packagesToPush: '$(Pipeline.Workspace)/packages/*.nupkg'
+        nuGetFeedType: internal
+        publishVstsFeed: '$(nuget_feed)'
